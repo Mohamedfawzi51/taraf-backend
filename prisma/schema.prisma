@@ -1,0 +1,301 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum MembershipTier {
+  STANDARD
+  GOLD
+  ELITE
+}
+
+enum ProductCategory {
+  PERFUMES
+  WATCHES
+  BAGS
+  ACCESSORIES
+}
+
+enum ProductBrand {
+  UNIQUE_DIAMOND
+  ORAD
+  TARAF_COLLECTION
+}
+
+enum BadgeVariant {
+  PRIMARY
+  SECONDARY
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum AddressIcon {
+  HOME
+  WORK
+}
+
+model User {
+  id              String         @id @default(uuid())
+  email           String         @unique
+  passwordHash    String
+  name            String
+  phone           String
+  avatar          String?
+  role            UserRole       @default(CUSTOMER)
+  membershipTier  MembershipTier @default(STANDARD)
+  loyaltyPoints   Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  refreshTokens RefreshToken[]
+  addresses     Address[]
+  orders        Order[]
+  reviews       Review[]
+  favorites     Favorite[]
+  cart          Cart?
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id                  String          @id @default(uuid())
+  slug                String          @unique
+  collection          String?
+  name                String
+  badge               String?
+  priceAmount         Int
+  originalPriceAmount Int?
+  discountPercent     Int?
+  description         String
+  listDescription     String?
+  category            ProductCategory
+  brand               ProductBrand
+  listBadgeLabel      String?
+  listBadgeVariant    BadgeVariant?
+  stock               Int             @default(0)
+  averageRating       Float           @default(0)
+  reviewCount         Int             @default(0)
+  isDeleted           Boolean         @default(false)
+  isFeatured          Boolean         @default(false)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  images        ProductImage[]
+  colors        ProductColor[]
+  specs         ProductSpec[]
+  relatedFrom   ProductRelation[] @relation("ProductRelatedFrom")
+  relatedTo     ProductRelation[] @relation("ProductRelatedTo")
+  reviews       Review[]
+  favorites     Favorite[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  collections   CollectionProduct[]
+  inventoryAlerts InventoryAlert[]
+}
+
+model ProductImage {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  src       String
+  publicId  String?
+  alt       String
+  sortOrder Int     @default(0)
+}
+
+model ProductColor {
+  id          String  @id @default(uuid())
+  productId   String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name        String
+  hexOrClass  String
+}
+
+model ProductSpec {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String
+  value     String
+}
+
+model ProductRelation {
+  productId        String
+  relatedProductId String
+  product          Product @relation("ProductRelatedFrom", fields: [productId], references: [id], onDelete: Cascade)
+  relatedProduct   Product @relation("ProductRelatedTo", fields: [relatedProductId], references: [id], onDelete: Cascade)
+
+  @@id([productId, relatedProductId])
+}
+
+model Collection {
+  id        String   @id @default(uuid())
+  title     String
+  slug      String   @unique
+  image     String
+  imageAlt  String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products CollectionProduct[]
+}
+
+model CollectionProduct {
+  collectionId String
+  productId    String
+  sortOrder    Int    @default(0)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, productId])
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String?    @unique
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String?    @unique
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(uuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int     @default(1)
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id                String        @id @default(uuid())
+  orderNumber       String        @unique
+  userId            String
+  user              User          @relation(fields: [userId], references: [id])
+  status            OrderStatus   @default(PENDING)
+  paymentStatus     PaymentStatus @default(PENDING)
+  paymentMethod     String?
+  subtotal          Int
+  vat               Int
+  shipping          Int
+  total             Int
+  shippingAddressId String
+  shippingAddress   Address       @relation(fields: [shippingAddressId], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  items OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  price     Int
+  quantity  Int
+  image     String
+}
+
+model Address {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String
+  icon      AddressIcon @default(HOME)
+  line1     String
+  line2     String?
+  city      String
+  country   String      @default("SA")
+  isDefault Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  orders Order[]
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authorName String
+  rating    Int
+  content   String
+  createdAt DateTime @default(now())
+
+  @@unique([productId, userId])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+model HomeContent {
+  id                    Int      @id @default(1)
+  hero                  Json
+  bentoItems            Json
+  featuredCollectionIds String[] @default([])
+  features              Json     @default("[]")
+  newsletterEnabled     Boolean  @default(true)
+  updatedAt             DateTime @updatedAt
+}
+
+model NewsletterSubscription {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model InventoryAlert {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockPercent Int
+  createdAt DateTime @default(now())
+}
