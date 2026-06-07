@@ -1,0 +1,71 @@
+openapi: 3.0.3
+info:
+  title: Taraf (ترف) Luxury E-Commerce API
+  version: 1.0.0
+  description: REST API for Arabic-first luxury e-commerce platform. Money in whole SAR.
+servers:
+  - url: http://localhost:3000/api/v1
+paths:
+  /auth/register:
+    post:
+      summary: Register customer
+      tags: [Auth]
+  /auth/login:
+    post:
+      summary: Login
+      tags: [Auth]
+  /auth/refresh:
+    post:
+      summary: Refresh token
+      tags: [Auth]
+  /auth/me:
+    get:
+      summary: Current user
+      tags: [Auth]
+  /products:
+    get:
+      summary: List products
+      tags: [Products]
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [perfumes, watches, bags, accessories]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, price-asc, price-desc]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+  /products/{slug}:
+    get:
+      summary: Product detail
+      tags: [Products]
+  /cart:
+    get:
+      summary: Get cart
+      tags: [Cart]
+  /checkout:
+    post:
+      summary: Create order from cart
+      tags: [Orders]
+  /home:
+    get:
+      summary: Home page content
+      tags: [Content]
+  /collections:
+    get:
+      summary: List collections
+      tags: [Collections]
+  /admin/stats:
+    get:
+      summary: Admin dashboard stats
+      tags: [Admin]
