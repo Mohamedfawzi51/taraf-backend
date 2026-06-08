@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt, { SignOptions } from "jsonwebtoken";
 import { UserRole } from "@prisma/client";
+import { env } from "../config/env";
 import { AppError, ErrorCodes } from "../utils/errors";
 
 export interface AuthPayload {
@@ -17,29 +18,23 @@ declare global {
 }
 
 export const signAccessToken = (payload: AuthPayload): string => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error("JWT_SECRET is not configured");
-  return jwt.sign(payload, secret, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "15m",
+  return jwt.sign(payload, env.jwtSecret, {
+    expiresIn: env.jwtExpiresIn,
   } as SignOptions);
 };
 
 export const signRefreshToken = (payload: AuthPayload): string => {
-  const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
-  if (!secret) throw new Error("JWT_REFRESH_SECRET is not configured");
-  return jwt.sign(payload, secret, { expiresIn: "7d" } as SignOptions);
+  return jwt.sign(payload, env.jwtRefreshSecret, {
+    expiresIn: "7d",
+  } as SignOptions);
 };
 
 export const verifyAccessToken = (token: string): AuthPayload => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error("JWT_SECRET is not configured");
-  return jwt.verify(token, secret) as AuthPayload;
+  return jwt.verify(token, env.jwtSecret) as AuthPayload;
 };
 
 export const verifyRefreshToken = (token: string): AuthPayload => {
-  const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
-  if (!secret) throw new Error("JWT_REFRESH_SECRET is not configured");
-  return jwt.verify(token, secret) as AuthPayload;
+  return jwt.verify(token, env.jwtRefreshSecret) as AuthPayload;
 };
 
 export const authenticate = (
