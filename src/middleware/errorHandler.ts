@@ -1,4 +1,6 @@
 import { NextFunction, Request, Response } from "express";
+import { env } from "../config/env";
+import { logger } from "../utils/logger";
 import { AppError, ErrorCodes } from "../utils/errors";
 
 export const errorHandler = (
@@ -18,6 +20,13 @@ export const errorHandler = (
     return;
   }
 
+  if (err.message === "Not allowed by CORS") {
+    res.status(403).json({
+      error: { code: ErrorCodes.FORBIDDEN, message: "CORS policy violation" },
+    });
+    return;
+  }
+
   if (err.message === "Only image files are allowed") {
     res.status(400).json({
       error: { code: ErrorCodes.BAD_REQUEST, message: err.message },
@@ -32,14 +41,15 @@ export const errorHandler = (
     return;
   }
 
+  logger.error("Unhandled error", err);
+
   res.status(500).json({
     error: {
       code: ErrorCodes.INTERNAL_ERROR,
       message: "Internal server error",
-      details:
-        process.env.NODE_ENV !== "production"
-          ? { message: err.message, stack: err.stack }
-          : undefined,
+      details: env.isDevelopment
+        ? { message: err.message, stack: err.stack }
+        : undefined,
     },
   });
 };
